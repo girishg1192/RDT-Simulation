@@ -155,6 +155,7 @@ void B_input(packet)
     B_active = TRUE;
     tolayer5(B, packet.payload);
     B_last_ack = B_sequence;
+    tolayer3(B, make_packet(0, B_last_ack, NULL));
     flipSequence(B);
   }
   else if(is_corrupt || !is_valid)
