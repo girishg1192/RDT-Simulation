@@ -23,7 +23,7 @@
 #define TRUE 1
 #define FALSE 0
 
-#define TIMER_EXPIRE 2.0
+#define TIMER_EXPIRE 10
 
 // A/B_sequence is the current sequence of the sender
 int A_sequence, B_sequence;
@@ -114,6 +114,7 @@ void A_input(packet)
   {
     stoptimer(A);
     is_timer_running = 0;
+    Await_for_ack = NOT_WAITING_ACK;
     //tolayer5(A, packet.payload);
   }
 }
@@ -150,6 +151,7 @@ void B_input(packet)
 {
   int is_corrupt = isCorrupted(&packet);
   int is_valid = isValidSeq(packet.seqnum);
+  printf("B: received %d waiting for %d\n", packet.seqnum, B_sequence);
   if(!is_corrupt && is_valid)
   {
     B_active = TRUE;
