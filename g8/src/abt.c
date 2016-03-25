@@ -1,6 +1,6 @@
 #include "../include/simulator.h"
-#include <stdlib.h>
-#include <string.h>
+#include "rdt_lib.h"
+#include <stdio.h>
 
 /* ******************************************************************
  ALTERNATING BIT AND GO-BACK-N NETWORK EMULATOR: VERSION 1.1  J.F.Kurose
@@ -17,13 +17,7 @@
 
 /********* STUDENTS WRITE THE NEXT SIX ROUTINES *********/
 
-#define A 0
-#define B 1
-
-#define TRUE 1
-#define FALSE 0
-
-#define TIMER_EXPIRE 10
+#define TIMER_EXPIRE 8
 
 // A/B_sequence is the current sequence of the sender
 int A_sequence, B_sequence;
@@ -41,22 +35,6 @@ enum ACK_STATES {NOT_WAITING_ACK = -1,
                  BIT_1};
 enum ACK_STATES Await_for_ack;
 
-//-----------Move to Library------------
-int compute_checksum(struct pkt *packet)
-{
-  int checksum = packet->seqnum + packet->acknum;
-  for(int i=0; i<20; i++)
-  {
-    checksum += packet->payload[i];
-  }
-  return checksum;
-}
-int isCorrupted(struct pkt *packet)
-{
-  if(compute_checksum(packet) != packet->checksum)
-    return TRUE;
-  return FALSE;
-}
 int isValidAck(int ackNum)
 {
   if(ackNum == Await_for_ack)
@@ -70,18 +48,6 @@ void flipSequence(int AorB)
   if(AorB == B)
     B_sequence = (B_sequence+1)%2;
 }
-struct pkt make_packet(int sequence, int acknum, char* message)
-{
-  struct pkt packet;
-  packet.seqnum = sequence;
-  packet.acknum = acknum;
-  memset(packet.payload, 0, sizeof(packet.payload));
-  if(message!=NULL)
-    memcpy(packet.payload, &message, sizeof(message));
-  packet.checksum = compute_checksum(&packet);
-  return packet;
-}
-//-----------Move to Library------------
 
 struct pkt last_sent_packet;
 int is_timer_running;
