@@ -83,8 +83,17 @@ void A_input(packet)
     A_base = packet.acknum + 1;
     printf("Packet: %d %f\n", packet.acknum, get_sim_time());
     for(struct list_elem *e = list_begin(&current_window); 
-        e!=list_end(&current_window) && list_entry(e, struct packet_elem, elem)->packet.seqnum < A_base;
-        e = list_remove(e));
+        e!=list_end(&current_window);)
+    {
+      struct packet_elem *del = list_entry(e, struct packet_elem, elem);
+      if(del->packet.seqnum < A_base)
+      {
+        free(del);
+        e = list_remove(e);
+      }
+      else
+        break;
+    }
     send_buffered();
     if(A_base == A_nextseqnum)
       check_and_stop_timer();
@@ -94,13 +103,14 @@ void A_input(packet)
   else
     printf("ACK: Corrupt\n");
 }
-send_buffered()
+void send_buffered()
 {
   while(A_nextseqnum< (A_base+window_size) && buff_count)
   {
-    struct pkt buff_data = list_entry(list_pop_front(&buffered_packets), 
-           struct packet_elem, elem)->packet;
-    tolayer3(A, buff_data);
+    struct packet_elem *buff= list_entry(list_pop_front(&buffered_packets)
+                                          ,struct packet_elem, elem);
+    tolayer3(A, buff->packet);
+    free(buff);
     A_nextseqnum++;
     buff_count--;
   }

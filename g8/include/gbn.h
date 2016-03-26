@@ -25,4 +25,6 @@ struct packet_elem
   struct list_elem elem;
 };
 
+void send_buffered();
+
 #define TIMER_EXPIRE 20
