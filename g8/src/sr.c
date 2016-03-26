@@ -91,6 +91,13 @@ void A_input(packet)
         break;
       e = list_next(e);
     };
+    e = list_begin(&current_window);
+    int move_window = list_entry(e, struct packet_elem, elem)->packet.seqnum;
+    if(A_base < move_window-1)
+    {
+      A_base = move_window-1;
+    }
+
   }
 }
 
