@@ -33,7 +33,8 @@ struct packet_elem
   struct list_elem elem;
 };
 
-#define TIMER_EXPIRE 20
+#define TIMER_EXPIRE 10
+void send_buffered();
 
 bool sort_seq(struct list_elem *a_, struct list_elem *b_)
 {

@@ -52,8 +52,9 @@ void A_output(message)
     {
       struct packet_elem *buff_data = malloc(sizeof(struct packet_elem));
       printf("RDT_SEND:alloc\n");
-      int buffered_sequence = A_nextseqnum + buff_count;
-      buff_data->packet = make_packet(buffered_sequence, 0, message.data);
+      //int buffered_sequence = A_nextseqnum + buff_count;
+      A_nextseqnum++;
+      buff_data->packet = make_packet(A_nextseqnum, 0, message.data);
       printf("RDT_SEND:alloc\n");
       list_push_back(&buffered_packets, &buff_data->elem);
       printf("RDT_SEND:push\n");
@@ -91,13 +92,29 @@ void A_input(packet)
         break;
       e = list_next(e);
     };
-    e = list_begin(&current_window);
-    int move_window = list_entry(e, struct packet_elem, elem)->packet.seqnum;
-    if(A_base < move_window-1)
-    {
-      A_base = move_window-1;
-    }
-
+    //e = list_begin(&current_window);
+    //int move_window = list_entry(e, struct packet_elem, elem)->packet.seqnum;
+    //if(A_base < move_window-1)
+    //{
+    //  A_base = move_window-1;
+    //  send_buffered();
+    //}
+  }
+}
+void send_buffered()
+{
+  while(A_nextseqnum < (A_base+window_size) && buff_count)
+  {
+    struct packet_elem *buff= list_entry(list_pop_front(&buffered_packets)
+                                          ,struct packet_elem, elem);
+    buff->timer_val = get_sim_time() + TIMER_EXPIRE;
+    list_insert_ordered(&current_window, &buff->elem,
+        (list_less_func *)&sort_timer, NULL);
+    check_and_set_timer(buff->timer_val);
+    tolayer3(A, buff->packet);
+    A_nextseqnum++;
+    buff_count--;
+    free(buff);
   }
 }
 
