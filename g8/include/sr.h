@@ -22,6 +22,7 @@ int buff_count;
 int B_base;
 struct pkt B_last_ack;
 struct list receiver_window;
+int receiver_window_size;
 
 struct list current_window;
 struct list buffered_packets;
@@ -29,18 +30,19 @@ struct list buffered_packets;
 struct packet_elem
 {
   struct pkt packet;
+  int seq;
   float timer_val;
   struct list_elem elem;
 };
 
-#define TIMER_EXPIRE 10
+#define TIMER_EXPIRE 30
 void send_buffered();
 
-bool sort_seq(struct list_elem *a_, struct list_elem *b_)
+bool sort_sequence(struct list_elem *a_, struct list_elem *b_)
 {
   struct packet_elem *a = list_entry(a_, struct packet_elem, elem);
   struct packet_elem *b = list_entry(b_, struct packet_elem, elem);
-  return a->packet.seqnum < a->packet.seqnum;
+  return a->seq < b->seq;
 }
 bool sort_timer(struct list_elem *a_, struct list_elem *b_)
 {
