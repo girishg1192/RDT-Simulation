@@ -55,9 +55,9 @@ struct pkt make_packet(int sequence, int acknum, char* message)
 void adjust_timer()
 {
   estimated_RTT +=TIMER_ADJUST;
-  if(estimated_RTT>=15)
+  if(estimated_RTT>=18)
   {
-    estimated_RTT = 15;
+    estimated_RTT = 18;
   }
 }
 
