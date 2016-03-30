@@ -56,12 +56,11 @@ struct pkt make_packet(int sequence, int acknum, char* message)
 #define MAX_BUFFER 500
 
 
-void check_and_set_timer(float req_timeout)
+void check_and_set_timer(float req_timeout, int seq)
 {
-  float curr_timer = get_sim_time();
-  if(curr_timeout<=curr_timer && !is_timer_running)
+  if(!is_timer_running)
   {
-    curr_timeout = curr_timer + TIMER_EXPIRE;
+    curr_timeout = seq;
     starttimer(A, TIMER_EXPIRE);
     is_timer_running =1;
   }
@@ -76,7 +75,9 @@ void A_output(struct msg message)
     struct packet_elem curr_data;
     curr_data.packet = make_packet(A_nextseqnum, 0, message.data);
     curr_data.timer_val = get_sim_time() + TIMER_EXPIRE;
-    check_and_set_timer(curr_data.timer_val);
+    curr_data.start_time = get_sim_time();
+    curr_data.retrans = 0;
+    check_and_set_timer(curr_data.timer_val, A_nextseqnum);
     current_window.push_back(curr_data);
     current_window.sort(sort_timer);
     tolayer3(A, curr_data.packet);
@@ -88,12 +89,11 @@ void A_output(struct msg message)
     printf("SENDER: RDT_SEND:Buffer %d\n", buff_count);
     if(buff_count< MAX_BUFFER)
     {
-      //struct packet_elem *buff_data = malloc(sizeof(struct packet_elem));
       struct packet_elem buff_data;
       printf("SENDER: RDT_SEND:alloc\n");
-      //int buffered_sequence = A_nextseqnum + buff_count;
-      A_nextseqnum++;
-      buff_data.packet = make_packet(A_nextseqnum, 0, message.data);
+      int buffered_seq = A_nextseqnum + buff_count;
+      buff_data.packet = make_packet(buffered_seq, 0, message.data);
+      buff_data.retrans = 0;
       printf("SENDER: RDT_SEND:alloc\n");
       buffered_packets.push_back(buff_data);
       printf("SENDER: RDT_SEND:push\n");
@@ -114,31 +114,43 @@ void A_input(struct pkt packet)
     {
       if(packet.acknum == ackd->packet.seqnum)
       {
-        printf("%f %f\n", ackd->timer_val, curr_timeout);
+        printf("%f %d\n", ackd->timer_val, curr_timeout);
         if(ackd->packet.seqnum== curr_timeout)
         {
           stoptimer(A);
           is_timer_running = 0;
           //`struct packet_elem *temp= list_entry(list_next(e), struct packet_elem, elem);
-          list<struct packet_elem>::iterator temp= ackd;
-          temp++;
-          float timeout = temp->timer_val - get_sim_time();
-          curr_timeout = temp->packet.seqnum;
-          starttimer(A, timeout);
-          is_timer_running = 1;
+          ackd = current_window.erase(ackd);
+          if(current_window.size()>0)
+          {
+            printf("SENDER: Not empty\n");
+            struct packet_elem temp = current_window.front();
+            float timeout = temp.timer_val - get_sim_time();
+            curr_timeout = temp.packet.seqnum;
+            starttimer(A, timeout);
+            is_timer_running = 1;
+          }
         }
         else
-          printf("SENDER: ugh\n");
-        current_window.pop_front();
+          ackd = current_window.erase(ackd);
         break;
       }
-      else if(packet.acknum >= ackd->packet.seqnum)
-        break;
-    };
-    int move_window = current_window.front().packet.seqnum;
-    if(A_base < move_window-1)
+    }
+    if(current_window.size()!=0)
     {
-      A_base = move_window-1;
+      list<struct packet_elem>::iterator move_win = min_element(current_window.begin(),
+          current_window.end(), sort_sequence);
+      int move_window = move_win->packet.seqnum;
+      printf("SENDER: window %d Base: %d", move_window, A_base);
+      if(A_base < move_window-1)
+      {
+        A_base = move_window-1;
+        send_buffered();
+      }
+    }
+    else
+    {
+      A_base = packet.acknum;
       send_buffered();
     }
   }
@@ -154,8 +166,8 @@ void send_buffered()
     //list_insert_ordered(&current_window, &buff->elem,
     //    (list_less_func *)&sort_timer, NULL);
     buffered_packets.pop_front();
-    buffered_packets.push_back(buff);
-    check_and_set_timer(buff.timer_val);
+    current_window.push_back(buff);
+    check_and_set_timer(buff.timer_val, buff.packet.seqnum);
     tolayer3(A, buff.packet);
     A_nextseqnum++;
     buff_count--;
@@ -183,9 +195,11 @@ void A_timerinterrupt()
     struct packet_elem temp = current_window.front();
     float timeout = temp.timer_val - get_sim_time();
     curr_timeout = temp.packet.seqnum;
-    printf("SENDER: TIMERINT: %f %f\n", timeout, get_sim_time());
+    //printf("SENDER: TIMERINT: %f %f\n", timeout, get_sim_time());
     starttimer(A, timeout);
   }
+  else 
+    is_timer_running=0;
 }  
 
 /* the following routine will be called once (only) before any other */

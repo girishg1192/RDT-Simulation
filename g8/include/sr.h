@@ -14,7 +14,7 @@ int window_size;
 
 //---------TIMER---------
 int in_flight;
-float curr_timeout;
+int curr_timeout;
 
 int is_timer_running;
 int buff_count;
@@ -31,6 +31,8 @@ struct packet_elem
 {
   struct pkt packet;
   float timer_val;
+  float start_time;
+  int retrans;
 };
 
 #define TIMER_EXPIRE 30
