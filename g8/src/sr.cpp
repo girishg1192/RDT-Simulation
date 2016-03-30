@@ -249,7 +249,7 @@ void B_input(struct pkt packet)
       //for(struct list_elem *e = list_begin(&receiver_window); 
       //    e!=list_end(&receiver_window);)
       for(list<struct packet_elem>::iterator packet = receiver_window.begin(); 
-          packet!=receiver_window.end(); packet++)
+          packet!=receiver_window.end();)
       {
         printf("RECEIVER: B: buffered %d %d\n", packet->packet.seqnum, B_base);
         if(packet->packet.seqnum == B_base)
