@@ -24,6 +24,7 @@ using namespace std;
 
 #define TRUE 1
 #define FALSE 0
+#define TIMER_ADJUST 1.0
 
 
 int compute_checksum(struct pkt *packet)
@@ -53,6 +54,15 @@ struct pkt make_packet(int sequence, int acknum, char* message)
   return packet;
 }
 
+void adjust_timer()
+{
+  estimated_RTT +=TIMER_ADJUST;
+  if(estimated_RTT>=20)
+  {
+    estimated_RTT = 20;
+  }
+}
+
 
 #define MAX_BUFFER 500
 
@@ -62,7 +72,7 @@ void check_and_set_timer(float req_timeout, int seq)
   if(!is_timer_running)
   {
     curr_timeout = seq;
-    starttimer(A, TIMER_EXPIRE);
+    starttimer(A, estimated_RTT);
     is_timer_running =1;
   }
 }
@@ -75,7 +85,7 @@ void A_output(struct msg message)
     //struct packet_elem *curr_data = malloc(sizeof(struct packet_elem));
     struct packet_elem curr_data;
     curr_data.packet = make_packet(A_nextseqnum, 0, message.data);
-    curr_data.timer_val = get_sim_time() + TIMER_EXPIRE;
+    curr_data.timer_val = get_sim_time() + estimated_RTT;
     curr_data.start_time = get_sim_time();
     curr_data.retrans = 0;
     check_and_set_timer(curr_data.timer_val, A_nextseqnum);
@@ -115,6 +125,9 @@ void A_input(struct pkt packet)
     {
       if(packet.acknum == ackd->packet.seqnum)
       {
+        float SampleRTT = get_sim_time() - ackd->start_time;
+        if(ackd->retrans!=1 && SampleRTT >=10.0)
+          estimated_RTT = 0.875*estimated_RTT + 0.125*(SampleRTT);
         printf("%f %d\n", ackd->timer_val, curr_timeout);
         if(ackd->packet.seqnum== curr_timeout)
         {
@@ -163,9 +176,9 @@ void send_buffered()
     //struct packet_elem *buff= list_entry(list_pop_front(&buffered_packets)
     //                                      ,struct packet_elem, elem);
     struct packet_elem buff = buffered_packets.front();
-    buff.timer_val = get_sim_time() + TIMER_EXPIRE;
-    //list_insert_ordered(&current_window, &buff->elem,
-    //    (list_less_func *)&sort_timer, NULL);
+    buff.timer_val = get_sim_time() + estimated_RTT;
+    buff.start_time = get_sim_time();
+    buff.retrans = 0;
     buffered_packets.pop_front();
     current_window.push_back(buff);
     check_and_set_timer(buff.timer_val, buff.packet.seqnum);
@@ -179,24 +192,20 @@ void send_buffered()
 void A_timerinterrupt()
 {
   printf("\n\nSENDER: meh\n");
+  adjust_timer();
   if(current_window.size()!=0)
   {
-    //struct list_elem *e = list_pop_front(&current_window);
     struct packet_elem sndpkt = current_window.front();
-    //struct packet_elem *sndpkt= list_entry(e, struct packet_elem, elem);
     printf("SENDER: TIMERINT: %f %d\n", get_sim_time(), sndpkt.packet.seqnum);
     tolayer3(A, sndpkt.packet);
 
-    sndpkt.timer_val = get_sim_time() + TIMER_EXPIRE;
-//    list_insert_ordered(&current_window, &sndpkt->elem,
-//        (list_less_func*)&sort_timer, NULL);
+    sndpkt.timer_val = get_sim_time() + estimated_RTT;
+    sndpkt.retrans = 1;
     current_window.pop_front();
     current_window.push_back(sndpkt);
-    //struct packet_elem *temp= list_entry(list_next(e), struct packet_elem, elem);
     struct packet_elem temp = current_window.front();
     float timeout = temp.timer_val - get_sim_time();
     curr_timeout = temp.packet.seqnum;
-    //printf("SENDER: TIMERINT: %f %f\n", timeout, get_sim_time());
     starttimer(A, timeout);
   }
   else 
@@ -212,6 +221,7 @@ void A_init()
   window_size = getwinsize();
   is_timer_running = 0;
   curr_timeout = 1;
+  estimated_RTT = 20.0;
 
   in_flight = 0;
 }
@@ -250,7 +260,7 @@ void B_input(struct pkt packet)
       //for(struct list_elem *e = list_begin(&receiver_window); 
       //    e!=list_end(&receiver_window);)
       for(list<struct packet_elem>::iterator packet = receiver_window.begin(); 
-          packet!=receiver_window.end(); packet++)
+          packet!=receiver_window.end();)
       {
         printf("RECEIVER: B: buffered %d %d\n", packet->packet.seqnum, B_base);
         if(packet->packet.seqnum == B_base)
