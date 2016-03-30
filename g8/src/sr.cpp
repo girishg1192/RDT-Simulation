@@ -255,12 +255,12 @@ void B_input(struct pkt packet)
         if(packet->packet.seqnum == B_base)
         {
           tolayer5(B, packet->packet.payload);
-          receiver_window.erase(packet);
+          packet = receiver_window.erase(packet);
           B_base++;
         }
         else if(packet->packet.seqnum <B_base)
         {
-          receiver_window.erase(packet);
+          packet=receiver_window.erase(packet);
         }
         else
         {
