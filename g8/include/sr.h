@@ -23,6 +23,7 @@ int B_base;
 struct pkt B_last_ack;
 list<struct packet_elem> receiver_window;
 int receiver_window_size;
+float estimated_RTT;
 
 struct list<struct packet_elem> current_window;
 struct list<struct packet_elem> buffered_packets;
@@ -35,7 +36,7 @@ struct packet_elem
   int retrans;
 };
 
-#define TIMER_EXPIRE 30
+#define TIMER_EXPIRE 20
 void send_buffered();
 
 bool sort_sequence(struct packet_elem &a, struct packet_elem &b)
