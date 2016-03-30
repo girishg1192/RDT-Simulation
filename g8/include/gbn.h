@@ -19,7 +19,7 @@ struct pkt B_last_ack;
 list<struct packet_elem> current_window;
 list<struct pkt> buffered_packets;
 float estimated_RTT;
-float TIMER_ADJUST = 0.5;
+float TIMER_ADJUST = 1;
 
 struct packet_elem
 {

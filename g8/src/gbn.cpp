@@ -1,6 +1,6 @@
 #include "gbn.h"
 #include "../include/simulator.h"
-//#include <stdio.h>
+#include <stdio.h>
 #include<iostream>
 #include <string.h>
 using namespace std;
@@ -55,9 +55,9 @@ struct pkt make_packet(int sequence, int acknum, char* message)
 void adjust_timer()
 {
   estimated_RTT +=TIMER_ADJUST;
-  if(estimated_RTT>=18)
+  if(estimated_RTT>=20)
   {
-    estimated_RTT = 18;
+    estimated_RTT = 20;
   }
 }
 
@@ -124,7 +124,7 @@ void A_input(struct pkt packet)
     printf("Packet: %d %f\n", packet.acknum, get_sim_time());
     //for(struct list_elem *e = list_begin(&current_window); 
     //    e!=list_end(&current_window);)
-    for(list<struct packet_elem>::iterator packet = current_window.begin(); packet!=current_window.end(); packet++)
+    for(list<struct packet_elem>::iterator packet = current_window.begin(); packet!=current_window.end(); )
     {
       if(packet->packet.seqnum < A_base)
       {
@@ -132,7 +132,7 @@ void A_input(struct pkt packet)
         float SampleRTT = get_sim_time() - packet->start_time;
         if(packet->retrans!=1 && SampleRTT >=10.0)
           estimated_RTT = 0.875*estimated_RTT + 0.125*(SampleRTT);
-        current_window.erase(packet);
+        packet = current_window.erase(packet);
       }
       else
         break;
