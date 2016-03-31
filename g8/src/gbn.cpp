@@ -203,6 +203,8 @@ void B_input(struct pkt packet)
     tolayer3(B, B_last_ack);
     B_expectedseq++;
   }
+  else
+    tolayer3(B, B_last_ack);
 }
 
 /* the following rouytine will be called once (only) before any other */
