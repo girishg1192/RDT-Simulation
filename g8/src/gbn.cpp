@@ -61,7 +61,7 @@ void adjust_timer()
   }
 }
 
-#define MAX_BUFFER 100
+#define MAX_BUFFER 500
 
 void check_and_start_timer()
 {
